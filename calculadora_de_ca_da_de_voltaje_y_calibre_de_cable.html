@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Profesional de Caída de Voltaje y Calibre de Cable</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0f172a',
+                        },
+                        amberCustom: '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font Family -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .tab-btn.active {
+            border-bottom: 2px solid #0284c7;
+            color: #0284c7;
+            font-weight: 600;
+        }
+        .dark .tab-btn.active {
+            border-bottom: 2px solid #38bdf8;
+            color: #38bdf8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+    <!-- Header / Navbar -->
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-brand-500 rounded-lg text-white shadow-md shadow-brand-500/20">
+                    <i data-lucide="zap" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight bg-gradient-to-r from-brand-600 to-amber-500 bg-clip-text text-transparent dark:from-brand-500 dark:to-amber-400">
+                        VoltCalc Pro
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Caída de Voltaje & Dimensionamiento de Conductores (NEC/NOM)</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <button id="themeToggleBtn" class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors">
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto">
+            <button id="tabCalculadora" onclick="switchTab('calculadora')" class="tab-btn active px-6 py-3 text-sm font-medium whitespace-nowrap flex items-center gap-2">
+                <i data-lucide="calculator" class="w-4 h-4"></i> Calculadora
+            </button>
+            <button id="tabEcuaciones" onclick="switchTab('ecuaciones')" class="tab-btn px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap flex items-center gap-2">
+                <i data-lucide="book-open" class="w-4 h-4"></i> Fórmulas y Criterios
+            </button>
+            <button id="tabTablaAmpacidad" onclick="switchTab('tablaAmpacidad')" class="tab-btn px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap flex items-center gap-2">
+                <i data-lucide="table" class="w-4 h-4"></i> Tabla de Ampacidad NEC
+            </button>
+        </div>
+
+        <!-- TAB 1: CALCULADORA -->
+        <div id="contentCalculadora" class="space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Input Parameters Form (Left) -->
+                <div class="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+                    <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-5 h-5 text-brand-500"></i> Parámetros de Entrada
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Configura las especificaciones de tu circuito eléctrico</p>
+                    </div>
+
+                    <form id="calcForm" onsubmit="event.preventDefault();" class="space-y-5">
+                        
+                        <!-- System Type & Voltage -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Fases del Sistema</label>
+                                <select id="sysType" onchange="updateVoltageOptions(); calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <option value="1ph">Monofásico (1P / 2P)</option>
+                                    <option value="3ph">Trifásico (3P)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Voltaje Nominal (V)</label>
+                                <select id="voltage" onchange="calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <!-- Populated via JS -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Current & Power Factor -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Corriente de Carga (A)</label>
+                                <div class="relative">
+                                    <input type="number" id="current" value="30" min="0.1" step="0.1" oninput="calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium">
+                                    <span class="absolute right-3 top-2.5 text-xs text-slate-400">A</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Factor de Potencia (FP)</label>
+                                <input type="number" id="pf" value="0.90" min="0.5" max="1.0" step="0.01" oninput="calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium">
+                            </div>
+                        </div>
+
+                        <!-- Distance & Unit -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Longitud del Circuito (1 sentido)</label>
+                                <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
+                                    <button type="button" id="unitMetersBtn" onclick="setUnit('m')" class="px-2 py-0.5 text-xs font-semibold rounded-md bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm">Metros</button>
+                                    <button type="button" id="unitFeetBtn" onclick="setUnit('ft')" class="px-2 py-0.5 text-xs font-semibold rounded-md text-slate-500 dark:text-slate-400">Pies</button>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <input type="number" id="distance" value="50" min="1" step="1" oninput="calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-3 pr-10 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium">
+                                <span id="distanceUnitLabel" class="absolute right-3 top-2.5 text-xs text-slate-400">m</span>
+                            </div>
+                        </div>
+
+                        <!-- Conductor Material & Conduit -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Material Conductor</label>
+                                <select id="material" onchange="calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <option value="Cu">Cobre (Cu)</option>
+                                    <option value="Al">Aluminio (Al)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Canalización (Conduit)</label>
+                                <select id="conduit" onchange="calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <option value="pvc">PVC / No Metálico</option>
+                                    <option value="steel">Acero Metálico (EMT/IMC)</option>
+                                    <option value="aluminum">Aluminio</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Voltage Drop Limit -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Límite Máximo de Caída Permisible (%)</label>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button type="button" onclick="setMaxDrop(1)" class="limit-btn py-2 border rounded-xl text-xs font-semibold transition-all border-slate-200 dark:border-slate-700 hover:border-brand-500" data-val="1">1%</button>
+                                <button type="button" onclick="setMaxDrop(2)" class="limit-btn py-2 border rounded-xl text-xs font-semibold transition-all border-slate-200 dark:border-slate-700 hover:border-brand-500" data-val="2">2%</button>
+                                <button type="button" onclick="setMaxDrop(3)" class="limit-btn active py-2 border rounded-xl text-xs font-semibold transition-all border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400" data-val="3">3%</button>
+                                <button type="button" onclick="setMaxDrop(5)" class="limit-btn py-2 border rounded-xl text-xs font-semibold transition-all border-slate-200 dark:border-slate-700 hover:border-brand-500" data-val="5">5%</button>
+                            </div>
+                        </div>
+
+                        <!-- Manual Gauge Selection Override -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Calibre a Evaluar (Opcional)</label>
+                            <select id="gaugeSelect" onchange="calculate();" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-mono">
+                                <option value="auto">-- Recomendado Automático --</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Calculation Results Panel (Right) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- Main KPI Cards -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                        <div id="statusBadge" class="absolute top-6 right-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold">
+                            <!-- Populated via JS -->
+                        </div>
+
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Calibre Mínimo Recomendado</span>
+                        <div class="mt-2 flex items-baseline gap-3">
+                            <span id="resGauge" class="text-4xl sm:text-5xl font-black text-brand-600 dark:text-brand-400 tracking-tight font-mono">10 AWG</span>
+                            <span id="resAmpacity" class="text-xs sm:text-sm text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">Ampacidad NEC: 30A</span>
+                        </div>
+
+                        <!-- Grid Metrics -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                            <div>
+                                <p class="text-xs text-slate-400">Caída de Voltaje</p>
+                                <p id="resDropVolts" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-1">2.45 V</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400">Porcentaje de Caída</p>
+                                <p id="resDropPercent" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-1">2.04 %</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400">Voltaje Final en Carga</p>
+                                <p id="resEndVoltage" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-1">117.55 V</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Circuit Diagram -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Esquema del Circuito en Tiempo Real</h3>
+                        
+                        <div class="bg-slate-50 dark:bg-slate-950 p-6 rounded-xl border border-slate-200 dark:border-slate-800 relative">
+                            <div class="flex items-center justify-between gap-2 text-center">
+                                
+                                <!-- Source -->
+                                <div class="flex flex-col items-center">
+                                    <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-500 flex items-center justify-center font-bold">
+                                        <i data-lucide="power" class="w-6 h-6"></i>
+                                    </div>
+                                    <span class="text-xs font-semibold mt-2">Fuente</span>
+                                    <span id="diagramSourceV" class="text-xs text-slate-500 font-mono">120.0 V</span>
+                                </div>
+
+                                <!-- Wire Line -->
+                                <div class="flex-1 flex flex-col items-center px-2">
+                                    <span id="diagramWireInfo" class="text-xs font-mono text-brand-600 dark:text-brand-400 font-semibold mb-1">10 AWG (Cu) - 50m</span>
+                                    <div class="w-full h-1.5 bg-gradient-to-r from-brand-500 to-amber-500 rounded-full relative">
+                                        <div class="absolute -top-2 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 font-mono">
+                                            ΔV: <span id="diagramDrop">2.45V</span>
+                                        </div>
+                                    </div>
+                                    <span id="diagramCurrent" class="text-[11px] text-slate-400 mt-2">I = 30A</span>
+                                </div>
+
+                                <!-- Load -->
+                                <div class="flex flex-col items-center">
+                                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center font-bold">
+                                        <i data-lucide="lightbulb" class="w-6 h-6"></i>
+                                    </div>
+                                    <span class="text-xs font-semibold mt-2">Carga</span>
+                                    <span id="diagramLoadV" class="text-xs text-slate-500 font-mono">117.55 V</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gauge Comparative Table -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Comparativa con Calibres Adyacentes</h3>
+                            <button onclick="exportSummary()" class="text-xs text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 font-medium">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar Reporte
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400">
+                                        <th class="pb-2 font-medium">Calibre AWG/kcmil</th>
+                                        <th class="pb-2 font-medium">Ampacidad</th>
+                                        <th class="pb-2 font-medium">Caída (V)</th>
+                                        <th class="pb-2 font-medium">Caída (%)</th>
+                                        <th class="pb-2 font-medium text-right">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gaugeComparisonTable" class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: ECUACIONES -->
+        <div id="contentEcuaciones" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-4xl mx-auto space-y-6">
+                <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-4">
+                    Fundamentos Técnicos y Fórmulas
+                </h2>
+
+                <div class="space-y-4">
+                    <h3 class="text-base font-semibold text-brand-600 dark:text-brand-400">1. Caída de Voltaje en Monofásico (2 Hilos)</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        En circuitos monofásicos, la corriente viaja por el conductor de fase y regresa por el neutro/retorno, por lo que la distancia total recorrida es el doble de la longitud del circuito ($2 \times L$).
+                    </p>
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl font-mono text-sm text-center">
+                        V_caída = (2 × L × I × Z) / 1000
+                    </div>
+                </div>
+
+                <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h3 class="text-base font-semibold text-brand-600 dark:text-brand-400">2. Caída de Voltaje en Trifásico (3 Hilos)</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        En sistemas trifásicos equilibrados, el desfasamiento de 120° reduce el factor de distancia efectiva a un multiplicador de $\sqrt{3} \approx 1.732$.
+                    </p>
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl font-mono text-sm text-center">
+                        V_caída = (1.732 × L × I × Z) / 1000
+                    </div>
+                </div>
+
+                <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h3 class="text-base font-semibold text-brand-600 dark:text-brand-400">3. Impedancia Efectiva (Z)</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        La impedancia $Z$ toma en cuenta la resistencia en Corriente Alterna ($R$) a 75°C y la reactancia inductiva del ducto ($X_L$) en función del Factor de Potencia ($\cos\theta$):
+                    </p>
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl font-mono text-sm text-center">
+                        Z = R × FP + X_L × sin(arccos(FP))
+                    </div>
+                </div>
+
+                <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h3 class="text-base font-semibold text-brand-600 dark:text-brand-400">4. Recomencaciones del Código Eléctrico (NEC Art. 210.19 / NOM-001)</h3>
+                    <ul class="list-disc pl-5 text-sm text-slate-600 dark:text-slate-300 space-y-2">
+                        <li><strong>Circuitos Derivados:</strong> Se recomienda una caída máxima del <strong>3%</strong> desde el tablero secundario hasta la carga más lejana.</li>
+                        <li><strong>Alimentadores + Derivados:</strong> La caída acumulada total desde el acometida principal hasta la última carga no debe superar el <strong>5%</strong> para garantizar la máxima eficiencia de los equipos.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: TABLA DE AMPACIDAD -->
+        <div id="contentTablaAmpacidad" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold">Tabla de Ampacidad de Conductores (NEC 310.16 / NOM-001)</h2>
+                        <p class="text-xs text-slate-500">Capacidad de conducción de corriente admisible a 75°C THHN/THWN en canalización.</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                <th class="p-3 font-semibold">Calibre AWG / kcmil</th>
+                                <th class="p-3 font-semibold">Ampacidad Cobre (Cu) @ 75°C</th>
+                                <th class="p-3 font-semibold">Ampacidad Aluminio (Al) @ 75°C</th>
+                                <th class="p-3 font-semibold">Resistencia Cu (Ω/km)</th>
+                                <th class="p-3 font-semibold">Resistencia Al (Ω/km)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fullAmpacityTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // NEC Table 8 / Table 310.16 Electrical Standards Data (75°C Ratings)
+        const CABLE_DATA = [
+            { gauge: "14 AWG",  ampCu: 20,  ampAl: 0,   rCu: 10.10, rAl: 16.60, xL: 0.190 },
+            { gauge: "12 AWG",  ampCu: 25,  ampAl: 20,  rCu: 6.33,  rAl: 10.40, xL: 0.177 },
+            { gauge: "10 AWG",  ampCu: 35,  ampAl: 25,  rCu: 3.97,  rAl: 6.53,  xL: 0.164 },
+            { gauge: "8 AWG",   ampCu: 50,  ampAl: 40,  rCu: 2.56,  rAl: 4.20,  xL: 0.171 },
+            { gauge: "6 AWG",   ampCu: 65,  ampAl: 50,  rCu: 1.61,  rAl: 2.66,  xL: 0.167 },
+            { gauge: "4 AWG",   ampCu: 85,  ampAl: 65,  rCu: 1.02,  rAl: 1.67,  xL: 0.157 },
+            { gauge: "3 AWG",   ampCu: 100, ampAl: 75,  rCu: 0.81,  rAl: 1.33,  xL: 0.154 },
+            { gauge: "2 AWG",   ampCu: 115, ampAl: 90,  rCu: 0.64,  rAl: 1.05,  xL: 0.148 },
+            { gauge: "1 AWG",   ampCu: 130, ampAl: 100, rCu: 0.51,  rAl: 0.84,  xL: 0.148 },
+            { gauge: "1/0 AWG", ampCu: 150, ampAl: 120, rCu: 0.40,  rAl: 0.66,  xL: 0.144 },
+            { gauge: "2/0 AWG", ampCu: 175, ampAl: 135, rCu: 0.32,  rAl: 0.52,  xL: 0.141 },
+            { gauge: "3/0 AWG", ampCu: 200, ampAl: 155, rCu: 0.25,  rAl: 0.42,  xL: 0.138 },
+            { gauge: "4/0 AWG", ampCu: 230, ampAl: 180, rCu: 0.20,  rAl: 0.33,  xL: 0.135 },
+            { gauge: "250 kcmil", ampCu: 255, ampAl: 205, rCu: 0.17, rAl: 0.28,  xL: 0.135 },
+            { gauge: "300 kcmil", ampCu: 285, ampAl: 230, rCu: 0.14, rAl: 0.23,  xL: 0.135 },
+            { gauge: "350 kcmil", ampCu: 310, ampAl: 250, rCu: 0.12, rAl: 0.20,  xL: 0.131 },
+            { gauge: "400 kcmil", ampCu: 335, ampAl: 270, rCu: 0.10, rAl: 0.17,  xL: 0.131 },
+            { gauge: "500 kcmil", ampCu: 380, ampAl: 310, rCu: 0.08, rAl: 0.14,  xL: 0.128 },
+            { gauge: "600 kcmil", ampCu: 420, ampAl: 350, rCu: 0.07, rAl: 0.12,  xL: 0.128 },
+            { gauge: "750 kcmil", ampCu: 475, ampAl: 385, rCu: 0.06, rAl: 0.09,  xL: 0.125 },
+            { gauge: "1000 kcmil",ampCu: 545, ampAl: 445, rCu: 0.04, rAl: 0.07,  xL: 0.121 }
+        ];
+
+        let state = {
+            unit: 'm', // 'm' or 'ft'
+            maxDropPercent: 3
+        };
+
+        // Initialize Theme Toggle & Lucide
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            populateGaugeSelect();
+            updateVoltageOptions();
+            populateAmpacityTable();
+            calculate();
+
+            // Theme handler
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            themeToggleBtn.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+            });
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('contentCalculadora').classList.add('hidden');
+            document.getElementById('contentEcuaciones').classList.add('hidden');
+            document.getElementById('contentTablaAmpacidad').classList.add('hidden');
+
+            if(tabName === 'calculadora') {
+                document.getElementById('tabCalculadora').classList.add('active');
+                document.getElementById('contentCalculadora').classList.remove('hidden');
+            } else if(tabName === 'ecuaciones') {
+                document.getElementById('tabEcuaciones').classList.add('active');
+                document.getElementById('contentEcuaciones').classList.remove('hidden');
+            } else if(tabName === 'tablaAmpacidad') {
+                document.getElementById('tabTablaAmpacidad').classList.add('active');
+                document.getElementById('contentTablaAmpacidad').classList.remove('hidden');
+            }
+        }
+
+        function setUnit(unit) {
+            state.unit = unit;
+            const metersBtn = document.getElementById('unitMetersBtn');
+            const feetBtn = document.getElementById('unitFeetBtn');
+            const label = document.getElementById('distanceUnitLabel');
+
+            if(unit === 'm') {
+                metersBtn.className = "px-2 py-0.5 text-xs font-semibold rounded-md bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm";
+                feetBtn.className = "px-2 py-0.5 text-xs font-semibold rounded-md text-slate-500 dark:text-slate-400";
+                label.innerText = 'm';
+            } else {
+                feetBtn.className = "px-2 py-0.5 text-xs font-semibold rounded-md bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm";
+                metersBtn.className = "px-2 py-0.5 text-xs font-semibold rounded-md text-slate-500 dark:text-slate-400";
+                label.innerText = 'ft';
+            }
+            calculate();
+        }
+
+        function setMaxDrop(val) {
+            state.maxDropPercent = val;
+            document.querySelectorAll('.limit-btn').forEach(btn => {
+                if(parseInt(btn.getAttribute('data-val')) === val) {
+                    btn.className = "limit-btn active py-2 border rounded-xl text-xs font-semibold transition-all border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400";
+                } else {
+                    btn.className = "limit-btn py-2 border rounded-xl text-xs font-semibold transition-all border-slate-200 dark:border-slate-700 hover:border-brand-500";
+                }
+            });
+            calculate();
+        }
+
+        function updateVoltageOptions() {
+            const sysType = document.getElementById('sysType').value;
+            const voltageSelect = document.getElementById('voltage');
+            voltageSelect.innerHTML = '';
+
+            const options = sysType === '1ph' 
+                ? [120, 208, 240, 277, 480] 
+                : [208, 240, 480, 600];
+
+            options.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.innerText = `${v} V`;
+                voltageSelect.appendChild(opt);
+            });
+        }
+
+        function populateGaugeSelect() {
+            const select = document.getElementById('gaugeSelect');
+            CABLE_DATA.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.gauge;
+                opt.innerText = c.gauge;
+                select.appendChild(opt);
+            });
+        }
+
+        function populateAmpacityTable() {
+            const tbody = document.getElementById('fullAmpacityTableBody');
+            tbody.innerHTML = '';
+            CABLE_DATA.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50";
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-brand-600 dark:text-brand-400">${c.gauge}</td>
+                    <td class="p-3">${c.ampCu} A</td>
+                    <td class="p-3">${c.ampAl > 0 ? c.ampAl + ' A' : 'N/A'}</td>
+                    <td class="p-3">${c.rCu.toFixed(2)}</td>
+                    <td class="p-3">${c.rAl.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function calculate() {
+            const sysType = document.getElementById('sysType').value;
+            const voltage = parseFloat(document.getElementById('voltage').value) || 120;
+            const current = parseFloat(document.getElementById('current').value) || 0;
+            let distance = parseFloat(document.getElementById('distance').value) || 0;
+            const material = document.getElementById('material').value; // 'Cu' or 'Al'
+            const conduit = document.getElementById('conduit').value;
+            const pf = parseFloat(document.getElementById('pf').value) || 0.90;
+            const manualGauge = document.getElementById('gaugeSelect').value;
+
+            if (distance <= 0 || current <= 0) return;
+
+            // Convert distance to km for formula with standard table values
+            const distanceKm = state.unit === 'ft' ? (distance * 0.3048) / 1000 : distance / 1000;
+
+            // Multiplier for system phase
+            const phaseMultiplier = sysType === '1ph' ? 2 : Math.sqrt(3);
+
+            // Calculate reactance sin component
+            const sinPf = Math.sin(Math.acos(pf));
+
+            let selectedCable = null;
+            let calculatedDropVolts = 0;
+            let calculatedDropPercent = 0;
+
+            if (manualGauge !== 'auto') {
+                selectedCable = CABLE_DATA.find(c => c.gauge === manualGauge);
+            } else {
+                // Auto-select smallest gauge meeting ampacity & max voltage drop limit
+                for (let cable of CABLE_DATA) {
+                    const ampacity = material === 'Cu' ? cable.ampCu : cable.ampAl;
+                    
+                    // Filter out non-supported aluminum gauges (e.g., 14 AWG Al)
+                    if (ampacity === 0) continue;
+
+                    // Ampacity safety check (NEC continuous load factor 125%)
+                    if (ampacity < current * 1.0) continue;
+
+                    const r = material === 'Cu' ? cable.rCu : cable.rAl;
+                    let xL = cable.xL;
+
+                    // Conduit adjustment factors
+                    if (conduit === 'steel') xL *= 1.15;
+
+                    const z = (r * pf) + (xL * sinPf);
+                    const dropV = (phaseMultiplier * distanceKm * current * z);
+                    const dropP = (dropV / voltage) * 100;
+
+                    if (dropP <= state.maxDropPercent) {
+                        selectedCable = cable;
+                        calculatedDropVolts = dropV;
+                        calculatedDropPercent = dropP;
+                        break;
+                    }
+                }
+
+                // If no cable satisfies strict voltage drop, pick the largest cable available
+                if (!selectedCable) {
+                    selectedCable = CABLE_DATA[CABLE_DATA.length - 1];
+                }
+            }
+
+            // Recalculate drop for the determined selected Cable
+            const ampacity = material === 'Cu' ? selectedCable.ampCu : selectedCable.ampAl;
+            const r = material === 'Cu' ? selectedCable.rCu : selectedCable.rAl;
+            let xL = selectedCable.xL;
+            if (conduit === 'steel') xL *= 1.15;
+
+            const z = (r * pf) + (xL * sinPf);
+            calculatedDropVolts = (phaseMultiplier * distanceKm * current * z);
+            calculatedDropPercent = (calculatedDropVolts / voltage) * 100;
+
+            const endVoltage = voltage - calculatedDropVolts;
+            const isWithinLimit = calculatedDropPercent <= state.maxDropPercent;
+
+            // Update Results Cards
+            document.getElementById('resGauge').innerText = selectedCable.gauge;
+            document.getElementById('resAmpacity').innerText = `Ampacidad NEC: ${ampacity}A`;
+            document.getElementById('resDropVolts').innerText = `${calculatedDropVolts.toFixed(2)} V`;
+            document.getElementById('resDropPercent').innerText = `${calculatedDropPercent.toFixed(2)} %`;
+            document.getElementById('resEndVoltage').innerText = `${endVoltage.toFixed(2)} V`;
+
+            // Status Badge
+            const badge = document.getElementById('statusBadge');
+            if (isWithinLimit) {
+                badge.className = "absolute top-6 right-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20";
+                badge.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> DENTRO DE NORMA (< ${state.maxDropPercent}%)`;
+            } else {
+                badge.className = "absolute top-6 right-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20";
+                badge.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4"></i> EXCEDE LÍMITE (${calculatedDropPercent.toFixed(1)}% > ${state.maxDropPercent}%)`;
+            }
+
+            // Diagram Update
+            document.getElementById('diagramSourceV').innerText = `${voltage.toFixed(1)} V`;
+            document.getElementById('diagramWireInfo').innerText = `${selectedCable.gauge} (${material}) - ${distance}${state.unit}`;
+            document.getElementById('diagramDrop').innerText = `${calculatedDropVolts.toFixed(2)}V`;
+            document.getElementById('diagramCurrent').innerText = `I = ${current}A`;
+            document.getElementById('diagramLoadV').innerText = `${endVoltage.toFixed(2)} V`;
+
+            // Comparison Table Render
+            renderComparisonTable(selectedCable, voltage, current, distanceKm, phaseMultiplier, pf, sinPf, material, conduit);
+            
+            lucide.createIcons();
+        }
+
+        function renderComparisonTable(currentCable, voltage, current, distanceKm, phaseMultiplier, pf, sinPf, material, conduit) {
+            const tbody = document.getElementById('gaugeComparisonTable');
+            tbody.innerHTML = '';
+
+            const currentIndex = CABLE_DATA.findIndex(c => c.gauge === currentCable.gauge);
+            const startIndex = Math.max(0, currentIndex - 2);
+            const endIndex = Math.min(CABLE_DATA.length - 1, currentIndex + 2);
+
+            for (let i = startIndex; i <= endIndex; i++) {
+                const cable = CABLE_DATA[i];
+                const ampacity = material === 'Cu' ? cable.ampCu : cable.ampAl;
+                if (ampacity === 0) continue;
+
+                const r = material === 'Cu' ? cable.rCu : cable.rAl;
+                let xL = cable.xL;
+                if (conduit === 'steel') xL *= 1.15;
+
+                const z = (r * pf) + (xL * sinPf);
+                const dropV = (phaseMultiplier * distanceKm * current * z);
+                const dropP = (dropV / voltage) * 100;
+                const isCurrent = cable.gauge === currentCable.gauge;
+                const isOK = dropP <= state.maxDropPercent && ampacity >= current;
+
+                const tr = document.createElement('tr');
+                tr.className = isCurrent 
+                    ? "bg-brand-50/50 dark:bg-brand-900/20 font-semibold" 
+                    : "hover:bg-slate-50 dark:hover:bg-slate-800/40";
+
+                tr.innerHTML = `
+                    <td class="py-2.5 font-mono flex items-center gap-1.5">
+                        ${isCurrent ? '<i data-lucide="chevron-right" class="w-3.5 h-3.5 text-brand-500"></i>' : ''}
+                        ${cable.gauge}
+                    </td>
+                    <td class="py-2.5">${ampacity} A</td>
+                    <td class="py-2.5">${dropV.toFixed(2)} V</td>
+                    <td class="py-2.5 font-mono">${dropP.toFixed(2)} %</td>
+                    <td class="py-2.5 text-right">
+                        ${isOK 
+                            ? '<span class="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded text-[10px]">CUMPLE</span>' 
+                            : '<span class="text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded text-[10px]">NO CUMPLE</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function exportSummary() {
+            const gauge = document.getElementById('resGauge').innerText;
+            const dropV = document.getElementById('resDropVolts').innerText;
+            const dropP = document.getElementById('resDropPercent').innerText;
+            const endV = document.getElementById('resEndVoltage').innerText;
+            const current = document.getElementById('current').value;
+            const voltage = document.getElementById('voltage').value;
+            const distance = document.getElementById('distance').value;
+            const unit = state.unit;
+
+            const text = `=== REPORTE DE CÁLCULO DE CABLE ELÉCTRICO (VoltCalc Pro) ===\n` +
+                         `Calibre Seleccionado: ${gauge}\n` +
+                         `Tensión Nominal: ${voltage} V\n` +
+                         `Corriente de Carga: ${current} A\n` +
+                         `Longitud: ${distance} ${unit}\n` +
+                         `--------------------------------------------------\n` +
+                         `Caída de Voltaje: ${dropV} (${dropP})\n` +
+                         `Voltaje en la Carga: ${endV}\n` +
+                         `Cumplimiento Normativo NEC: ${parseFloat(dropP) <= state.maxDropPercent ? 'SÍ CUMPLE' : 'NO CUMPLE'}\n`;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            alert('¡Reporte copiado exitosamente al portapapeles!');
+        }
+    </script>
+</body>
+</html>
